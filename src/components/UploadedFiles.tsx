@@ -1,5 +1,5 @@
-import React from 'react';
-import { FileText, Loader2, Check } from 'lucide-react';
+import React, { useRef } from 'react';
+import { FileText, Loader2, Check, Plus } from 'lucide-react';
 
 interface FileStatus {
   name: string;
@@ -11,17 +11,21 @@ interface FileStatus {
 
 interface UploadedFilesProps {
   files: FileStatus[];
-  selectedFiles: FileStatus[];
+  selectedFile: FileStatus | null;
   onFileSelect: (file: FileStatus) => void;
+  onAddFiles?: (files: File[]) => void;
   onFileClick: (file: FileStatus) => void;
+ 
 }
 
 const UploadedFiles: React.FC<UploadedFilesProps> = ({ 
   files, 
-  selectedFiles, 
+  selectedFile, 
   onFileSelect,
-  onFileClick
+  onFileClick,
+  onAddFiles
 }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const getFileIconColor = (status: string) => {
     switch (status) {
       case 'completed':
@@ -48,25 +52,57 @@ const UploadedFiles: React.FC<UploadedFilesProps> = ({
         return <FileText className="h-4 w-4 text-gray-400" />;
     }
   };
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && onAddFiles) {
+      onAddFiles(Array.from(e.target.files));
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+  const handleAddClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  
 
   if (files.length === 0) return null;
 
   return (
     <div className="mt-6">
-      <h3 className="text-sm font-medium text-gray-900 mb-3">
-        Uploaded Files {selectedFiles.length > 0 && `(${selectedFiles.length} selected)`}
-      </h3>
+       <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-medium text-gray-900">
+          Uploaded Files
+        </h3>
+        <button
+          onClick={handleAddClick}
+          className="inline-flex items-center px-2 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          title="Add more files"
+        >
+          <Plus className="h-4 w-4 text-gray-500 mr-1" />
+          <span>Add Files</span>
+        </button>
+      </div>
+      <input
+        type="file"
+        className="hidden"
+        multiple
+        accept=".txt,.md,.pdf,.json,.csv,.log,.xml,.yaml,.yml,text/*,application/pdf"
+        onChange={handleFileInput}
+        ref={fileInputRef}
+      />
       <div className="space-y-2">
         {files.map((file, index) => (
           <div key={index} className="flex space-x-2">
-            <button
-              onClick={() => onFileSelect(file)}
-              className={`flex-1 p-3 rounded-lg border transition-colors ${
-                selectedFiles.some(f => f.name === file.name)
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-blue-300'
-              }`}
-            >
+             <button
+            key={index}
+            onClick={() => onFileSelect(file)}
+            className={`w-full p-3 rounded-lg border transition-colors ${
+              selectedFile?.name === file.name
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-gray-200 hover:border-blue-300'
+            }`}
+          >
               <div className="flex items-center space-x-2">
                 {getStatusIcon(file.status)}
                 <div className="flex-1 text-left">

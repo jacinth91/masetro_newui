@@ -12,17 +12,27 @@ interface FileStatus {
   progress?: number;
 }
 
+interface Chat {
+  id: string;
+  messages: any[];
+  files: FileStatus[];
+}
+
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'upload'>('upload');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<FileStatus[]>([]);
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [activeChat, setActiveChat] = useState<string | null>(null);
 
   const handleLogout = () => {
     setIsLoggedIn(false);
     setActiveTab('upload');
     setShowSuggestions(false);
     setUploadedFiles([]);
+    setChats([]);
+    setActiveChat(null);
   };
 
   const handleFilesSummarized = () => {
@@ -41,7 +51,6 @@ const App: React.FC = () => {
       
       newFiles.forEach(file => {
         if (file && file.name) {
-          // Only update if the new status is different or progress has changed
           const existingFile = filesMap.get(file.name);
           if (!existingFile || 
               existingFile.status !== file.status || 
@@ -54,12 +63,22 @@ const App: React.FC = () => {
       return Array.from(filesMap.values());
     });
 
-    // Switch to chat view if we have completed files
     const hasCompletedFiles = newFiles.some(file => file.status === 'completed');
     if (hasCompletedFiles) {
       setShowSuggestions(true);
       setActiveTab('chat');
     }
+  };
+
+  const handleNewChat = () => {
+    const newChat: Chat = {
+      id: Date.now().toString(),
+      messages: [],
+      files: []
+    };
+    setChats(prev => [...prev, newChat]);
+    setActiveChat(newChat.id);
+    setActiveTab('chat');
   };
 
   if (!isLoggedIn) {
@@ -70,15 +89,19 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-gray-50 flex">
       <Sidebar 
         onTabChange={setActiveTab} 
-        activeTab={activeTab} 
+        activeTab={activeTab}
         onLogout={handleLogout}
+        onNewChat={handleNewChat}
+        chats={chats}
+        activeChat={activeChat}
+        onChatSelect={setActiveChat}
       />
       
       <div className="flex-1 ml-64">
         <header className="bg-white shadow-sm">
           <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
             <h1 className="text-xl font-semibold text-gray-900">
-              {activeTab === 'chat' ? 'MarketMaestro Assistant' : 'File Upload'}
+              {activeTab === 'chat' ? 'Market Maestro Assistant' : 'File Upload'}
             </h1>
           </div>
         </header>
@@ -88,6 +111,9 @@ const App: React.FC = () => {
             <ChatInterface 
               showSuggestions={showSuggestions} 
               uploadedFiles={uploadedFiles}
+              chatId={activeChat}
+              chats={chats}
+              onUpdateChats={setChats}
             />
           ) : (
             <FileUpload 
