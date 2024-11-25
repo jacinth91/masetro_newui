@@ -8,7 +8,7 @@ interface Suggestion {
 }
 
 interface SuggestedQueriesProps {
-  selectedFileName?: string;
+  selectedFileName?: string[];
   onQuerySelect: (query: string) => void;
 }
 

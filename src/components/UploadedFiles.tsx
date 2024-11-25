@@ -11,7 +11,7 @@ interface FileStatus {
 
 interface UploadedFilesProps {
   files: FileStatus[];
-  selectedFile: FileStatus | null;
+  selectedFile: FileStatus[];
   onFileSelect: (file: FileStatus) => void;
   onAddFiles?: (files: File[]) => void;
   onFileClick: (file: FileStatus) => void;
@@ -60,6 +60,8 @@ const UploadedFiles: React.FC<UploadedFilesProps> = ({
       }
     }
   };
+  const isFileSelected = (file: FileStatus) => 
+  selectedFile.some(selected => selected.name === file.name);
   const handleAddClick = () => {
     fileInputRef.current?.click();
   };
@@ -98,7 +100,7 @@ const UploadedFiles: React.FC<UploadedFilesProps> = ({
             key={index}
             onClick={() => onFileSelect(file)}
             className={`w-full p-3 rounded-lg border transition-colors ${
-              selectedFile?.name === file.name
+              isFileSelected(file)
                 ? 'border-blue-500 bg-blue-50'
                 : 'border-gray-200 hover:border-blue-300'
             }`}

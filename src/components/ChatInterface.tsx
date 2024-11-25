@@ -42,14 +42,26 @@ const ChatInterface: React.FC<ChatInterfaceProps> = (
     const [query, setQuery] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [showResults, setShowResults] = useState(false);
-    const [selectedFile, setSelectedFile] = useState<FileStatus | null>(null);
+    const [selectedFile, setSelectedFile] = useState<FileStatus[]>([]);
     const [files, setFiles] = useState<FileStatus[]>(uploadedFiles);
     const [summaryFile, setSummaryFile] = useState<FileStatus | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
   
     const currentChat = chats.find(chat => chat.id === chatId);
     const messages = currentChat?.messages || [];
+
+    const handleFileSelect = (file: FileStatus) => {
+      setSelectedFile(prev => {
+        const isSelected = prev.some(f => f.name === file.name);
+        if (isSelected) {
+          return prev.filter(f => f.name !== file.name);
+        } else {
+          return [...prev, file];
+        }
+      });
   
+      
+    };
     useEffect(() => {
       if (messagesEndRef.current) {
         messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -114,7 +126,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = (
       const i = Math.floor(Math.log(bytes) / Math.log(k));
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
-  
+    
     const handleAddFiles = (newFiles: File[]) => {
       const fileStatuses: FileStatus[] = newFiles.map(file => ({
         name: file.name,
@@ -164,13 +176,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = (
       }, 1500);
     };
   
-    if (!chatId) {
-      return (
-        <div className="flex items-center justify-center h-full">
-          <p className="text-gray-500">Select a chat or start a new one</p>
-        </div>
-      );
-    }
+    // if (!chatId) {
+    //   return (
+    //     <div className="flex items-center justify-center h-full">
+    //       <p className="text-gray-500">Select a chat or start a new one</p>
+    //     </div>
+    //   );
+    // }
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
       <div className="flex-1 overflow-hidden">
@@ -190,13 +202,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = (
             {showSuggestions && (
               <>
                 <SuggestedQueries
-                  selectedFileName={selectedFile?.name}
-                  onQuerySelect={(query) => setQuery(query)}
+                   selectedFileName={selectedFile.map(f => f.name)}
+                   onQuerySelect={(query) => setQuery(query)}
                 />
                 <UploadedFiles
                   files={files}
                   selectedFile={selectedFile}
-                  onFileSelect={setSelectedFile}
+                  onFileSelect={handleFileSelect}
                   onFileClick={setSummaryFile}
                   onAddFiles={handleAddFiles}                 />
               </>
@@ -209,7 +221,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = (
         query={query}
         isLoading={isLoading}
         onQueryChange={setQuery}
-        onSubmit={handleSubmit} selectedFiles={[]}      />
+        onSubmit={handleSubmit}
+        selectedFile={selectedFile}      />
 
       <FileSummaryDialog
         file={summaryFile}
