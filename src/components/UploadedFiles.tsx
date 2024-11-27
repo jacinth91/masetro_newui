@@ -66,20 +66,20 @@ const UploadedFiles: React.FC<UploadedFilesProps> = ({
     fileInputRef.current?.click();
   };
 
-  
 
-  if (files.length === 0) return null;
+
+  // if (files.length === 0) return null;
 
   return (
     <div className="mt-6">
        <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-gray-900">
-          Uploaded Files
+       <h3 className="text-sm font-medium text-gray-900">
+          {files.length > 0 ? `Files (${selectedFile.length} selected)` : 'Upload Files'}
         </h3>
         <button
           onClick={handleAddClick}
           className="inline-flex items-center px-2 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          title="Add more files"
+          title="Add files"
         >
           <Plus className="h-4 w-4 text-gray-500 mr-1" />
           <span>Add Files</span>
@@ -93,7 +93,8 @@ const UploadedFiles: React.FC<UploadedFilesProps> = ({
         onChange={handleFileInput}
         ref={fileInputRef}
       />
-      <div className="space-y-2">
+      {files.length > 0 ? (
+        <div className="space-y-2">
         {files.map((file, index) => (
           <div key={index} className="flex space-x-2">
              <button
@@ -142,6 +143,16 @@ const UploadedFiles: React.FC<UploadedFilesProps> = ({
           </div>
         ))}
       </div>
+      ):(
+<div className="text-center p-6 border-2 border-dashed border-gray-300 rounded-lg">
+          <FileText className="mx-auto h-12 w-12 text-gray-400" />
+          <p className="mt-2 text-sm text-gray-500">
+            Click "Add Files" to upload documents
+          </p>
+        </div>
+
+      )}
+      
     </div>
   );
 };

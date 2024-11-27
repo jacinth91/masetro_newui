@@ -33,11 +33,11 @@ const Sidebar: React.FC<SidebarProps> = ({
       value: 'chat' as const,
       hasAction: true
     },
-    { 
-      icon: Upload, 
-      label: 'Upload Files', 
-      value: 'upload' as const 
-    }
+    // { 
+    //   icon: Upload, 
+    //   label: 'Upload Files', 
+    //   value: 'upload' as const 
+    // }
   ];
 
   return (

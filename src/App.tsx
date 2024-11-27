@@ -20,8 +20,8 @@ interface Chat {
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activeTab, setActiveTab] = useState<'chat' | 'upload'>('upload');
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeTab, setActiveTab] = useState<'chat' | 'upload'>('chat');
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const [uploadedFiles, setUploadedFiles] = useState<FileStatus[]>([]);
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
