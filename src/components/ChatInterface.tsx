@@ -74,7 +74,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = (
   
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      if (!query.trim() || isLoading || !chatId) return;
+      //if (!query.trim() || isLoading || !chatId) return;
   
       const newUserMessage: Message = {
         id: Date.now().toString(),

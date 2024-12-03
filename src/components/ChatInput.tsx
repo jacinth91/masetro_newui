@@ -78,9 +78,12 @@ console.log('selected files ',selectedFile)
             )}
           </button>
         </form>
-        <p className="mt-2 text-xs text-center text-gray-500">
-          Press Enter to send, Shift + Enter for new line
-        </p>
+        <div className="mt-2 text-center">
+          
+          <p className="text-xs text-gray-400 mt-1 italic">
+          <span className="font-medium">Disclaimer:</span> MarketMaestro may occasionally present inaccuracies. It is recommended to independently verify all information provided.
+          </p>
+        </div>
       </div>
     </div>
   );
