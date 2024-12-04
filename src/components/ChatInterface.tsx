@@ -45,6 +45,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = (
     const [selectedFile, setSelectedFile] = useState<FileStatus[]>([]);
     const [files, setFiles] = useState<FileStatus[]>(uploadedFiles);
     const [summaryFile, setSummaryFile] = useState<FileStatus | null>(null);
+    const [isFirstMessage, setIsFirstMessage] = useState(true);
     const messagesEndRef = useRef<HTMLDivElement>(null);
   
     const currentChat = chats.find(chat => chat.id === chatId);
@@ -70,6 +71,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = (
   
     useEffect(() => {
       setFiles(uploadedFiles);
+      setIsFirstMessage(true);
     }, [uploadedFiles]);
   
     const handleSubmit = (e: React.FormEvent) => {
@@ -97,10 +99,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = (
   
       // Simulate API response
       setTimeout(() => {
+        //const responseTimestamp = Date.now();
+        let responseContent = '';
+  
+        if (isFirstMessage) {
+          responseContent = "I apologize, but I can't find any files relevent to your query yet. Please upload the relevant financial documents or reports you'd like me to analyze. I can help you better once you share the files you'd like to discuss.";
+          setIsFirstMessage(false);
+        } else {
+          responseContent = files.length > 0
+            ? `Based on ${files.map(f => f.name).join(', ')}: Here are the relevant financial metrics.`
+            : 'Here are the financial metrics based on your query:';
+        }
         const newAssistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           type: 'assistant',
-          content: 'Here are the financial metrics based on your query:'
+          content: responseContent
         };
   
         onUpdateChats(chats.map(chat => {
@@ -115,7 +128,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = (
   
         setQuery('');
         setIsLoading(false);
-        setShowResults(true);
+        setShowResults(!isFirstMessage);
       }, 1000);
     };
   
