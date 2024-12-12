@@ -181,3 +181,121 @@ export class ChatStateService {
     return this.activeChatId;
   }
 }
+import { Component, effect } from '@angular/core';
+import { ChatInputComponent } from '../../components/chat/chat-input/chat-input.component';
+import { FileSummaryDialogComponent } from '../../components/chat/file-summary-dialog/file-summary-dialog.component';
+import { SuggestedQueriesComponent } from '../../components/chat/suggested-queries/suggested-queries.component';
+import { UploadFilesComponent } from '../../components/chat/upload-files/upload-files.component';
+import { ChatMessageComponent } from '../../components/chat/chat-message/chat-message.component';
+import { Chat, FileStatus, Message } from '../../models/models';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { IndexedDbService } from '../../services/indexed-db.service';
+import { ChatStateService } from '../../signals/chat.signals';
+
+@Component({
+  selector: 'app-chat-interface',
+  imports: [
+    CommonModule,
+    FormsModule,
+    ChatInputComponent,
+    FileSummaryDialogComponent,
+    SuggestedQueriesComponent,
+    UploadFilesComponent,
+    ChatMessageComponent,
+  ],
+  providers:[IndexedDbService,ChatStateService],
+  templateUrl: './chat-interface.component.html',
+  styleUrl: './chat-interface.component.scss',
+})
+export class ChatInterfaceComponent {
+  query = '';
+  isLoading = false;
+  showResults = false;
+  selectedFile: FileStatus[] = [];
+  files: FileStatus[] = [];
+  summaryFile: any;
+  isFirstMessage = true;
+  chats: Chat[] = [];
+  messages:Message[] = [];
+  chatId: string | null = null;
+
+  constructor(private indexedDB:IndexedDbService,private chatSignals:ChatStateService) {
+    this.setupEffect()
+  }
+
+  ngOnInit(): void {
+
+    this.files = []; // Initialize with uploaded files
+   
+   
+  }
+  setupEffect(){
+    effect(()=>{
+      this.chatId = this.chatSignals.chatId();
+      console.log('active chat id',this.chatId)
+    })
+  }
+  handleFileSummary($event: any) {
+    this.summaryFile = $event;
+    console.log(this.summaryFile);
+  }
+
+  handleFileSelect(file: FileStatus): void {
+    const isSelected = this.selectedFile.some((f) => f.name === file.name);
+    this.selectedFile = isSelected
+      ? this.selectedFile.filter((f) => f.name !== file.name)
+      : [...this.selectedFile, file];
+  }
+  handleNewFiles($event: any) {
+    this.files = [...this.files, ...$event];
+    console.log(this.files);
+  }
+
+  handleSubmit(): void {
+    
+    //if (!this.query.trim() || this.isLoading || !this.chatId) 
+    if (!this.query) return;
+    
+    const newUserMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: this.query,
+    };
+    
+    this.updateChatMessages(newUserMessage);
+
+    this.isLoading = true;
+    this.showResults = false;
+
+    setTimeout(() => {
+      const responseContent = this.isFirstMessage
+        ? 'Please upload relevant financial documents or reports for better assistance.'
+        : 'Here are some insights based on your query.';
+
+      const newAssistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: responseContent,
+      };
+
+      this.updateChatMessages(newAssistantMessage);
+      this.query = '';
+      this.isLoading = false;
+      this.showResults = !this.isFirstMessage;
+      this.isFirstMessage = false;
+    }, 1000);
+  }
+
+  updateChatMessages(message: Message): void {
+    // this.chats = this.chats.map((chat) =>
+    //   chat.id === this.chatId
+    //     ? { ...chat, messages: [...chat.messages, message] }
+    //     : chat
+    // );
+    this.messages = [...this.messages,message]
+    console.log(this.messages)
+    this.indexedDB.addChat({id:(Date.now() +1).toString(),chat:[{message:this.messages}]})
+    
+  }
+}
