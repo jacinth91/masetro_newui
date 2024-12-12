@@ -125,3 +125,35 @@ const Sidebar: React.FC<SidebarProps> = ({
 };
 
 export default Sidebar;
+
+
+
+function addChatToExistingStore(chatId: string, messages: any[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('ChatDatabase'); // No version specified, will open existing DB
+
+    request.onsuccess = () => {
+      const db = request.result;
+      const transaction = db.transaction('chats', 'readwrite');
+      const store = transaction.objectStore('chats');
+
+      const chatData = { id: chatId, messages };
+      const putRequest = store.put(chatData);
+
+      putRequest.onsuccess = () => {
+        console.log(`Chat with ID "${chatId}" added/updated successfully.`);
+        resolve();
+      };
+
+      putRequest.onerror = () => {
+        console.error('Error adding/updating chat:', putRequest.error);
+        reject(putRequest.error);
+      };
+    };
+
+    request.onerror = () => {
+      console.error('Error opening the database:', request.error);
+      reject(request.error);
+    };
+  });
+}
