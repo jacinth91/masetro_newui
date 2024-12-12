@@ -157,3 +157,27 @@ function addChatToExistingStore(chatId: string, messages: any[]): Promise<void> 
     };
   });
 }
+
+
+import { Injectable, signal } from '@angular/core';
+
+@Injectable({ providedIn: 'root' })
+export class ChatStateService {
+  // Signal holding the current chatId
+  private activeChatId = signal<string | null>(null);
+
+  // Method to set a new chat ID
+  setActiveChat(chatId: string) {
+    this.activeChatId.set(chatId);
+  }
+
+  // Readable accessor for other components
+  get chatId() {
+    return this.activeChatId();
+  }
+
+  // Optional: expose a method returning the signal directly if needed
+  getChatIdSignal() {
+    return this.activeChatId;
+  }
+}
