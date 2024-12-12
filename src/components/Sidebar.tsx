@@ -299,3 +299,51 @@ export class ChatInterfaceComponent {
     
   }
 }
+
+
+
+updateChat(chat: any): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (!this.db) {
+      reject('Database is not initialized');
+      return;
+    }
+    const transaction = this.db.transaction(this.storeName, 'readwrite');
+    const store = transaction.objectStore(this.storeName);
+    const request = store.put(chat);
+
+    request.onsuccess = () => resolve();
+    request.onerror = (event) => reject(event);
+  });
+}
+
+getChat(id: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    if (!this.db) {
+      reject('Database is not initialized');
+      return;
+    }
+    const transaction = this.db.transaction(this.storeName, 'readonly');
+    const store = transaction.objectStore(this.storeName);
+    const request = store.get(id);
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = (event) => reject(event);
+  });
+}
+
+getAllChats(): Promise<any[]> {
+  return new Promise((resolve, reject) => {
+    if (!this.db) {
+      reject('Database is not initialized');
+      return;
+    }
+    const transaction = this.db.transaction(this.storeName, 'readonly');
+    const store = transaction.objectStore(this.storeName);
+    const request = store.getAll();
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = (event) => reject(event);
+  });
+}
+}
