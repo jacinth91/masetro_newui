@@ -136,3 +136,11 @@ export class S3UploadService {
     return forkJoin(requests); // Executes all API calls in parallel
   }
 }
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET", "POST", "PUT", "DELETE"],
+    "AllowedOrigins": ["*"],
+    "ExposeHeaders": []
+  }
+]
