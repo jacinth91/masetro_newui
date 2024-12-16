@@ -263,12 +263,27 @@ interface FileUpload {
   selector: 'app-file-upload',
   templateUrl: './file-upload.component.html',
 })
+import { Component, Signal, signal } from '@angular/core';
+import { S3UploadService } from './s3-upload.service';
+import { forkJoin, switchMap, map, catchError, of } from 'rxjs';
+
+interface FileUpload {
+  file: File;
+  progress: number;
+  status: 'pending' | 'uploading' | 'completed' | 'error';
+}
+
+@Component({
+  selector: 'app-file-upload',
+  templateUrl: './file-upload.component.html',
+})
 export class FileUploadComponent {
   files: FileUpload[] = [];
   isUploading = signal(false);
 
   constructor(private s3Service: S3UploadService) {}
 
+  // File selection logic remains unchanged
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files) {
@@ -280,22 +295,32 @@ export class FileUploadComponent {
     }
   }
 
+  // Upload files logic with updated S3 integration
   uploadFiles() {
     if (this.files.length === 0) return;
 
     this.isUploading.set(true);
     const fileNames = this.files.map(f => f.file.name);
 
-    // Step 1: Fetch pre-signed URLs for each file in parallel
+    // Step 1: Fetch pre-signed URLs for each file
     this.s3Service.fetchPresignedUrlsForFiles(fileNames).pipe(
       switchMap((presignedUrls) => {
         const uploadObservables = this.files.map((fileUpload, index) => {
           fileUpload.status = 'uploading';
-          return this.s3Service.uploadFileToS3(presignedUrls[index], fileUpload.file)
-            .pipe(map(progress => {
+
+          // Step 2: Call upload API (PUT to S3 pre-signed URL)
+          return this.s3Service.uploadFileToS3(presignedUrls[index], fileUpload.file).pipe(
+            map(progress => {
               fileUpload.progress = progress;
-              if (progress === 100) fileUpload.status = 'completed';
-            }));
+              if (progress === 100) {
+                fileUpload.status = 'completed';
+              }
+            }),
+            catchError(() => {
+              fileUpload.status = 'error';
+              return of(null);
+            })
+          );
         });
         return forkJoin(uploadObservables);
       })
@@ -303,9 +328,12 @@ export class FileUploadComponent {
       next: () => console.log('All files uploaded successfully!'),
       error: (error) => {
         console.error('Error uploading files:', error);
-        this.files.forEach(f => f.status = 'error');
+        this.files.forEach(f => {
+          if (f.status !== 'completed') f.status = 'error';
+        });
       },
       complete: () => this.isUploading.set(false),
     });
   }
 }
+
