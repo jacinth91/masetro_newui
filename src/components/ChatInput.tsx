@@ -90,3 +90,49 @@ console.log('selected files ',selectedFile)
 };
 
 export default ChatInput;
+
+
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpEvent, HttpEventType } from '@angular/common/http';
+import { Observable, forkJoin, map } from 'rxjs';
+
+@Injectable({ providedIn: 'root' })
+export class S3UploadService {
+  private apicEndpoint = 'https://your-apic-endpoint-to-fetch-url'; // Replace with APIC endpoint
+
+  constructor(private http: HttpClient) {}
+
+  // Fetch pre-signed URL for a single file
+  fetchPresignedUrl(fileName: string): Observable<any> {
+    return this.http.post<any>(this.apicEndpoint, { fileName });
+  }
+
+  // Upload file to S3 using the pre-signed URL
+  uploadFileToS3(presignedUrl: any, file: File): Observable<number> {
+    const formData = new FormData();
+    Object.keys(presignedUrl.fields).forEach((key) => {
+      formData.append(key, presignedUrl.fields[key]);
+    });
+    formData.append('file', file);
+
+    return this.http.post(presignedUrl.url, formData, {
+      observe: 'events',
+      reportProgress: true,
+    }).pipe(
+      map((event: HttpEvent<any>) => {
+        if (event.type === HttpEventType.UploadProgress && event.total) {
+          return Math.round((event.loaded / event.total) * 100);
+        } else if (event.type === HttpEventType.Response) {
+          return 100; // Upload complete
+        }
+        return 0;
+      })
+    );
+  }
+
+  // Fetch pre-signed URLs in parallel
+  fetchPresignedUrlsForFiles(fileNames: string[]): Observable<any[]> {
+    const requests = fileNames.map((fileName) => this.fetchPresignedUrl(fileName));
+    return forkJoin(requests); // Executes all API calls in parallel
+  }
+}

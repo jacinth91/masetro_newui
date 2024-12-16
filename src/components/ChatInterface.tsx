@@ -246,3 +246,66 @@ const ChatInterface: React.FC<ChatInterfaceProps> = (
 };
 
 export default ChatInterface;
+
+
+
+import { Component, Signal, signal } from '@angular/core';
+import { S3UploadService } from './s3-upload.service';
+import { forkJoin, switchMap } from 'rxjs';
+
+interface FileUpload {
+  file: File;
+  progress: number;
+  status: 'pending' | 'uploading' | 'completed' | 'error';
+}
+
+@Component({
+  selector: 'app-file-upload',
+  templateUrl: './file-upload.component.html',
+})
+export class FileUploadComponent {
+  files: FileUpload[] = [];
+  isUploading = signal(false);
+
+  constructor(private s3Service: S3UploadService) {}
+
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files) {
+      this.files = Array.from(input.files).map(file => ({
+        file,
+        progress: 0,
+        status: 'pending',
+      }));
+    }
+  }
+
+  uploadFiles() {
+    if (this.files.length === 0) return;
+
+    this.isUploading.set(true);
+    const fileNames = this.files.map(f => f.file.name);
+
+    // Step 1: Fetch pre-signed URLs for each file in parallel
+    this.s3Service.fetchPresignedUrlsForFiles(fileNames).pipe(
+      switchMap((presignedUrls) => {
+        const uploadObservables = this.files.map((fileUpload, index) => {
+          fileUpload.status = 'uploading';
+          return this.s3Service.uploadFileToS3(presignedUrls[index], fileUpload.file)
+            .pipe(map(progress => {
+              fileUpload.progress = progress;
+              if (progress === 100) fileUpload.status = 'completed';
+            }));
+        });
+        return forkJoin(uploadObservables);
+      })
+    ).subscribe({
+      next: () => console.log('All files uploaded successfully!'),
+      error: (error) => {
+        console.error('Error uploading files:', error);
+        this.files.forEach(f => f.status = 'error');
+      },
+      complete: () => this.isUploading.set(false),
+    });
+  }
+}
