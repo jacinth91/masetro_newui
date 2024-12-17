@@ -169,30 +169,45 @@ uploadFileToS3(presignedUrl: any, file: any): Observable<{ progress: number; sum
     }).pipe(
       map((event: HttpEvent<any>) => {
         if (event.type === HttpEventType.UploadProgress && event.total) {
-          // Emit upload progress percentage
           const progress = Math.round((event.loaded / event.total) * 100);
           observer.next({ progress });
         } else if (event.type === HttpEventType.Response) {
           console.log('First Upload Complete:', event);
-          observer.next({ progress: 100 }); // Emit 100% on upload complete
+          observer.next({ progress: 100 }); // Emit 100% on first upload complete
         }
       }),
       switchMap(() => {
         // Step 2: Get second presigned URL using filename
-        return this.http.get<any>('/v1/notify'+file.name );
+        return this.http.get<any>('/v1/notify' + file.name);
       }),
       switchMap((secondPresignedUrl) => {
         console.log('Second Presigned URL:', secondPresignedUrl);
-        const formData = new FormData();
-        Object.keys(presignedUrl.fields).forEach((key) => {
-          formData.append(key, presignedUrl.fields[key]);
-         });
-         formData.append('file', file);
-          this.http.post
-        // Step 3: Call summarize endpoint with object_key
-        return this.http.get<any>('/v2/sum'+ secondPresignedUrl.fields.key);
-          
-        
+
+        // Step 3: Upload file to second presigned URL
+        const secondFormData = new FormData();
+        Object.keys(secondPresignedUrl.fields).forEach((key) => {
+          secondFormData.append(key, secondPresignedUrl.fields[key]);
+        });
+        secondFormData.append('file', file);
+
+        return this.http.post(secondPresignedUrl.url, secondFormData, {
+          observe: 'events',
+          reportProgress: true,
+        }).pipe(
+          map((event: HttpEvent<any>) => {
+            if (event.type === HttpEventType.UploadProgress && event.total) {
+              const progress = Math.round((event.loaded / event.total) * 100);
+              observer.next({ progress }); // Emit progress for second upload
+            } else if (event.type === HttpEventType.Response) {
+              console.log('Second Upload Complete:', event);
+              observer.next({ progress: 100 }); // Emit 100% when second upload completes
+            }
+          }),
+          switchMap(() => {
+            // Step 4: Call summarize endpoint with object_key
+            return this.http.get<any>('/v2/sum' + secondPresignedUrl.fields.key);
+          })
+        );
       })
     ).subscribe({
       next: (summaryResponse) => {
@@ -208,3 +223,4 @@ uploadFileToS3(presignedUrl: any, file: any): Observable<{ progress: number; sum
     });
   });
 }
+
