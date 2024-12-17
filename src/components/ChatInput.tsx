@@ -144,3 +144,76 @@ export class S3UploadService {
     "ExposeHeaders": []
   }
 ]
+
+
+uploadFileToS3(presignedUrl: any, file: any): Observable<number> {
+  console.log(file, '764');
+  const headers = new HttpHeaders({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, GET',
+  });
+
+  const formData = new FormData();
+  Object.keys(presignedUrl.fields).forEach((key) => {
+    formData.append(key, presignedUrl.fields[key]);
+  });
+  formData.append('file', file);
+
+  console.log(formData, 'formdata');
+  for (const [key, value] of formData.entries()) {
+    console.log(key, value);
+  }
+
+  return this.http.post(presignedUrl.url, formData, {
+    observe: 'events',
+    reportProgress: true,
+    headers: headers,
+  }).pipe(
+    map((event: HttpEvent<any>) => {
+      if (event.type === HttpEventType.UploadProgress && event.total) {
+        return Math.round((event.loaded / event.total) * 100);
+      } else if (event.type === HttpEventType.Response) {
+        console.log(event, 'event');
+        return 100; // Upload complete
+      }
+      return 0;
+    }),
+    switchMap((progress) => {
+      if (progress === 100) {
+        // Call 2: Get another presigned URL by sending the filename
+        return this.http.post<any>('YOUR_GET_PRESIGNED_URL_ENDPOINT', { filename: file.name }).pipe(
+          switchMap((secondPresignedUrl) => {
+            console.log('Second Presigned URL:', secondPresignedUrl);
+
+            // Use the second presigned URL to upload the file again
+            const secondFormData = new FormData();
+            Object.keys(secondPresignedUrl.fields).forEach((key) => {
+              secondFormData.append(key, secondPresignedUrl.fields[key]);
+            });
+            secondFormData.append('file', file);
+
+            return this.http.post(secondPresignedUrl.url, secondFormData, {
+              observe: 'events',
+              reportProgress: true,
+            }).pipe(
+              map((event: HttpEvent<any>) => {
+                if (event.type === HttpEventType.UploadProgress && event.total) {
+                  return Math.round((event.loaded / event.total) * 100);
+                } else if (event.type === HttpEventType.Response) {
+                  console.log('Second Upload Complete:', event);
+                  return 100; // Second upload complete
+                }
+                return 0;
+              }),
+              switchMap(() => {
+                // Call 3: Generate summary by sending object_key
+                return this.http.post<any>('YOUR_GENERATE_SUMMARY_ENDPOINT', { object_key: secondPresignedUrl.fields.key });
+              })
+            );
+          })
+        );
+      }
+      return of(progress); // Pass progress if not 100
+    })
+  );
+}
