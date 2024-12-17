@@ -330,3 +330,54 @@ export class ChatInterfaceComponent {
     this.query = ''
   }
 }
+
+
+
+
+
+uploadFileToS3(presignedUrl: any, file: any): Observable<number> {
+  console.log(file,'764')
+  const headers = new HttpHeaders({
+    'Access-Control-Allow-Origin':'*',
+      'Access-Control-Allow-Methods':'POST ,GET'
+
+  })
+  const payload ={
+    key:presignedUrl.fields.key,
+    filename:file.name,
+    file:file
+  }
+  console.log(presignedUrl)
+  const formData = new FormData();
+  Object.keys(presignedUrl.fields).forEach((key) => {
+    
+    formData.append(key, presignedUrl.fields[key]);
+  });
+ 
+  formData.append('file', file);
+  
+  console.log(formData,'formdata')
+  for(const [key,value] of formData.entries()){
+    console.log(key,value)
+  }
+  return this.http.post(presignedUrl.url, formData, {
+    observe: 'events',
+    reportProgress: true,
+    headers:headers,
+
+    
+  }).pipe(
+    map((event: HttpEvent<any>) => {
+      if (event.type === HttpEventType.UploadProgress && event.total) {
+        return Math.round((event.loaded / event.total) * 100);
+      } else if (event.type === HttpEventType.Response) {
+        console.log(event,'event')
+        return 100; // Upload complete
+      }
+      return 0;
+    })
+  )
+}
+"target":"https://dev-summarize-api.edonpdev.cld1np.thehartford.com/generate-presigned-url/notify?filename=",
+"target":"https://dev-summarize-api.edonpdev.cld1np.thehartford.com/generate-presigned-url/generate-summary",
+You will provide that value has a GET param named object_keyto your /generate-summary
