@@ -146,7 +146,8 @@ export class S3UploadService {
 ]
 
 
-uploadFileToS3(presignedUrl: any, file: any): Observable<number> {
+
+uploadFileToS3(presignedUrl: any, file: any): Observable<{ progress: number; summary?: string }> {
   console.log(file, '764');
   const headers = new HttpHeaders({
     'Access-Control-Allow-Origin': '*',
@@ -159,61 +160,46 @@ uploadFileToS3(presignedUrl: any, file: any): Observable<number> {
   });
   formData.append('file', file);
 
-  console.log(formData, 'formdata');
-  for (const [key, value] of formData.entries()) {
-    console.log(key, value);
-  }
+  return new Observable((observer) => {
+    // Step 1: Upload file to first presigned URL
+    this.http.post(presignedUrl.url, formData, {
+      observe: 'events',
+      reportProgress: true,
+      headers: headers,
+    }).pipe(
+      map((event: HttpEvent<any>) => {
+        if (event.type === HttpEventType.UploadProgress && event.total) {
+          // Emit upload progress percentage
+          const progress = Math.round((event.loaded / event.total) * 100);
+          observer.next({ progress });
+        } else if (event.type === HttpEventType.Response) {
+          console.log('First Upload Complete:', event);
+          observer.next({ progress: 100 }); // Emit 100% on upload complete
+        }
+      }),
+      switchMap(() => {
+        // Step 2: Get second presigned URL using filename
+        return this.http.post<any>('YOUR_GET_PRESIGNED_URL_ENDPOINT', { filename: file.name });
+      }),
+      switchMap((secondPresignedUrl) => {
+        console.log('Second Presigned URL:', secondPresignedUrl);
 
-  return this.http.post(presignedUrl.url, formData, {
-    observe: 'events',
-    reportProgress: true,
-    headers: headers,
-  }).pipe(
-    map((event: HttpEvent<any>) => {
-      if (event.type === HttpEventType.UploadProgress && event.total) {
-        return Math.round((event.loaded / event.total) * 100);
-      } else if (event.type === HttpEventType.Response) {
-        console.log(event, 'event');
-        return 100; // Upload complete
+        // Step 3: Call summarize endpoint with object_key
+        return this.http.post<any>('YOUR_GENERATE_SUMMARY_ENDPOINT', {
+          object_key: secondPresignedUrl.fields.key,
+        });
+      })
+    ).subscribe({
+      next: (summaryResponse) => {
+        console.log('Summary Response:', summaryResponse);
+        // Emit the final summary along with progress 100
+        observer.next({ progress: 100, summary: summaryResponse.summary });
+        observer.complete();
+      },
+      error: (error) => {
+        console.error('Error during upload or summary generation:', error);
+        observer.error(error);
       }
-      return 0;
-    }),
-    switchMap((progress) => {
-      if (progress === 100) {
-        // Call 2: Get another presigned URL by sending the filename
-        return this.http.post<any>('YOUR_GET_PRESIGNED_URL_ENDPOINT', { filename: file.name }).pipe(
-          switchMap((secondPresignedUrl) => {
-            console.log('Second Presigned URL:', secondPresignedUrl);
-
-            // Use the second presigned URL to upload the file again
-            const secondFormData = new FormData();
-            Object.keys(secondPresignedUrl.fields).forEach((key) => {
-              secondFormData.append(key, secondPresignedUrl.fields[key]);
-            });
-            secondFormData.append('file', file);
-
-            return this.http.post(secondPresignedUrl.url, secondFormData, {
-              observe: 'events',
-              reportProgress: true,
-            }).pipe(
-              map((event: HttpEvent<any>) => {
-                if (event.type === HttpEventType.UploadProgress && event.total) {
-                  return Math.round((event.loaded / event.total) * 100);
-                } else if (event.type === HttpEventType.Response) {
-                  console.log('Second Upload Complete:', event);
-                  return 100; // Second upload complete
-                }
-                return 0;
-              }),
-              switchMap(() => {
-                // Call 3: Generate summary by sending object_key
-                return this.http.post<any>('YOUR_GENERATE_SUMMARY_ENDPOINT', { object_key: secondPresignedUrl.fields.key });
-              })
-            );
-          })
-        );
-      }
-      return of(progress); // Pass progress if not 100
-    })
-  );
+    });
+  });
 }
