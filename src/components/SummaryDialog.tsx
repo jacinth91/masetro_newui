@@ -170,3 +170,163 @@ const SummaryDialog: React.FC<SummaryDialogProps> = ({ isOpen, onClose, files })
 };
 
 export default SummaryDialog;
+
+import { Component, effect, inject } from '@angular/core';
+import { ChatInputComponent } from '../../components/chat/chat-input/chat-input.component';
+import { FileSummaryDialogComponent } from '../../components/chat/file-summary-dialog/file-summary-dialog.component';
+import { SuggestedQueriesComponent } from '../../components/chat/suggested-queries/suggested-queries.component';
+import { UploadFilesComponent } from '../../components/chat/upload-files/upload-files.component';
+import { ChatMessageComponent } from '../../components/chat/chat-message/chat-message.component';
+import { Chat, FileStatus, Message } from '../../models/models';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { IndexedDbService } from '../../services/indexed-db.service';
+import { ChatStateService } from '../../signals/chat.signals';
+import { ChatService } from '../../services/chat.service';
+
+@Component({
+  selector: 'app-chat-interface',
+  imports: [
+    CommonModule,
+    FormsModule,
+    ChatInputComponent,
+    FileSummaryDialogComponent,
+    SuggestedQueriesComponent,
+    UploadFilesComponent,
+    ChatMessageComponent,
+  ],
+  providers:[IndexedDbService,ChatService],
+  templateUrl: './chat-interface.component.html',
+  styleUrl: './chat-interface.component.scss',
+})
+export class ChatInterfaceComponent {
+  
+  query = '';
+  isLoading = false;
+  showResults = false;
+  selectedFile: FileStatus[] = [];
+  files: FileStatus[] = [];
+  summaryFile: any;
+  isFirstMessage = true;
+  chats: Chat[] = [];
+  messages:Message[] = [];
+  chatId: string | null = null;
+
+  constructor(private chatState:ChatStateService,private llm :ChatService) {
+    this.setupEffect()
+  }
+
+  // get activeChat(){
+  //   return this.chatState.activeChat?.messages || []
+  // }
+  ngOnInit(): void {
+
+    this.files = []; // Initialize with uploaded files
+
+    if(!this.chatState.activeChatId()){
+      this.chatState.createNewChat()
+    }
+   
+  }
+
+  loadNewChatSession():void{
+
+  }
+  setupEffect(){
+    effect(()=>{
+      this.chatId = this.chatState.activeChatId();
+      console.log('active chat id',this.chatId)
+      
+      if(this.chatId){
+        this.clearChatInterface()
+      }
+    })
+  }
+  handleFileSummary($event: any) {
+    this.summaryFile = $event;
+    console.log(this.summaryFile);
+  }
+
+  handleFileSelect(file: FileStatus): void {
+    const isSelected = this.selectedFile.some((f) => f.name === file.name);
+    this.selectedFile = isSelected
+      ? this.selectedFile.filter((f) => f.name !== file.name)
+      : [...this.selectedFile, file];
+  }
+  handleNewFiles($event: any) {
+    this.files = [...this.files, ...$event];
+    console.log(this.files);
+  }
+
+  getLLm_response(){
+    this.llm.fetchResponses({'user_prompt': this.query}).subscribe({
+      next: (response)=>{
+        console.log(response)
+       
+        const newAssistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: response.llm_response,
+        };
+  
+        this.updateChatMessages(newAssistantMessage);
+        
+      },
+      error:(err)=>{
+        console.log(err)
+      }
+    })
+  }
+
+  handleSubmit(): void {
+    //this.getLLm_response()
+    console.log(this.query,'3434')
+    //if (!this.query.trim() || this.isLoading || !this.chatId) 
+    if (!this.query) return;
+    
+      const newUserMessage: Message = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: this.query,
+      };
+      this.updateChatMessages(newUserMessage);
+      this.isLoading = true;
+     this.showResults = false;
+    this.getLLm_response();
+    
+
+   
+
+    // setTimeout(() => {
+    //   const responseContent = this.isFirstMessage
+    //     ? 'Please upload relevant financial documents or reports for better assistance.'
+    //     : 'Here are some insights based on your query.';
+
+   
+      
+    
+      
+      this.query = '';
+      this.isLoading = false;
+      this.showResults = !this.isFirstMessage;
+      this.isFirstMessage = false;
+    // }, 1000);
+  }
+
+  updateChatMessages(message: Message): void {
+    // this.chats = this.chats.map((chat) =>
+    //   chat.id === this.chatId
+    //     ? { ...chat, messages: [...chat.messages, message] }
+    //     : chat
+    // );
+    this.messages = [...this.messages,message]
+    console.log(this.messages)
+    this.chatState.addMessages(this.messages)
+    
+  }
+  clearChatInterface(){
+    this.messages = []
+    this.files = []
+    this.query = ''
+  }
+}
