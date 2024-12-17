@@ -179,15 +179,20 @@ uploadFileToS3(presignedUrl: any, file: any): Observable<{ progress: number; sum
       }),
       switchMap(() => {
         // Step 2: Get second presigned URL using filename
-        return this.http.post<any>('YOUR_GET_PRESIGNED_URL_ENDPOINT', { filename: file.name });
+        return this.http.get<any>('/v1/notify'+file.name );
       }),
       switchMap((secondPresignedUrl) => {
         console.log('Second Presigned URL:', secondPresignedUrl);
-
+        const formData = new FormData();
+        Object.keys(presignedUrl.fields).forEach((key) => {
+          formData.append(key, presignedUrl.fields[key]);
+         });
+         formData.append('file', file);
+          this.http.post
         // Step 3: Call summarize endpoint with object_key
-        return this.http.post<any>('YOUR_GENERATE_SUMMARY_ENDPOINT', {
-          object_key: secondPresignedUrl.fields.key,
-        });
+        return this.http.get<any>('/v2/sum'+ secondPresignedUrl.fields.key);
+          
+        
       })
     ).subscribe({
       next: (summaryResponse) => {
