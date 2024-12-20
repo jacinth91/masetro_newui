@@ -11,3 +11,40 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+
+
+import { Component, Input, OnInit, OnDestroy } from '@angular/core';
+
+@Component({
+  selector: 'app-typing-animation',
+  template: `<p class="text-sm" [innerHTML]="displayedText | lineBreak"></p>`,
+  styleUrls: ['./typing-animation.component.css']
+})
+export class TypingAnimationComponent implements OnInit, OnDestroy {
+  @Input() text: string = ''; // Full text to animate
+  @Input() typingSpeed: number = 50; // Typing speed in milliseconds
+
+  displayedText: string = ''; // Text being displayed incrementally
+  private currentIndex: number = 0; // Current character index
+  private timeoutId: any; // Timeout ID to clear when necessary
+
+  ngOnInit(): void {
+    this.startTypingAnimation();
+  }
+
+  ngOnDestroy(): void {
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+    }
+  }
+
+  private startTypingAnimation(): void {
+    if (this.currentIndex < this.text.length) {
+      this.timeoutId = setTimeout(() => {
+        this.displayedText += this.text[this.currentIndex];
+        this.currentIndex++;
+        this.startTypingAnimation(); // Call recursively until the full text is displayed
+      }, this.typingSpeed);
+    }
+  }
+}
