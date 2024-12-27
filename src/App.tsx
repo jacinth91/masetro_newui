@@ -129,3 +129,119 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+
+
+
+
+/**
+ * Environment Configuration for API URLs and Azure Client ID with Host Detection
+ */
+
+const getHostEnv = (hostOverride) => {
+  let host = window.location.hostname || '';
+
+  if (hostOverride) {
+    host = hostOverride;
+  }
+
+  if (host === 'localhost') {
+    return 'LOCAL';
+  }
+
+  host = host.split(/[-.]/)[0] || '';
+
+  if (host === 'int') {
+    return 'DEV';
+  }
+
+  if (host === 'objection') {
+    return 'PROD';
+  }
+
+  const knownHosts = ['dev', 'qa', 'prod'];
+  return knownHosts.includes(host) ? host.toUpperCase() : 'DEV';
+};
+
+const environment = getHostEnv();
+
+/**
+ * API Configuration based on environment
+ */
+const apiConfigs = {
+  LOCAL: {
+    baseUrl: '',
+    bucket: '/v1/bucket',
+    realtime: '/v1/realtime',
+    notify: '/v1/notify',
+    res: '/v2/res',
+    rag: '/v2/rag',
+    chat: '/v1/chat',
+    bucketRag: '/rag/bucket',
+    azureClientId: 'LOCAL_AZURE_CLIENT_ID'
+  },
+  DEV: {
+    baseUrl: 'https://dev-summarize-api.edonpdev.cld1np.thehartford.com',
+    bucket: '/v1/bucket',
+    realtime: '/v1/realtime',
+    notify: '/v1/notify',
+    res: '/v2/res',
+    rag: '/v2/rag',
+    chat: '/v1/chat',
+    bucketRag: '/rag/bucket',
+    azureClientId: 'DEV_AZURE_CLIENT_ID'
+  },
+  QA: {
+    baseUrl: 'https://qa-summarize-api.edonpdev.cld1np.thehartford.com',
+    bucket: '/v1/bucket',
+    realtime: '/v1/realtime',
+    notify: '/v1/notify',
+    res: '/v2/res',
+    rag: '/v2/rag',
+    chat: '/v1/chat',
+    bucketRag: '/rag/bucket',
+    azureClientId: 'QA_AZURE_CLIENT_ID'
+  },
+  PROD: {
+    baseUrl: 'https://api.your-production-domain.com',
+    bucket: '/v1/bucket',
+    realtime: '/v1/realtime',
+    notify: '/v1/notify',
+    res: '/v2/res',
+    rag: '/v2/rag',
+    chat: '/v1/chat',
+    bucketRag: '/rag/bucket',
+    azureClientId: 'PROD_AZURE_CLIENT_ID'
+  },
+};
+
+/**
+ * Azure Client ID Configuration
+ */
+const getAzureClientId = () => {
+  switch (environment) {
+    case 'DEV':
+      return apiConfigs.DEV.azureClientId;
+    case 'QA':
+      return apiConfigs.QA.azureClientId;
+    case 'PROD':
+      return apiConfigs.PROD.azureClientId;
+    default:
+      return apiConfigs.LOCAL.azureClientId;
+  }
+};
+
+/**
+ * API Configuration Export
+ */
+export const ApiConfig = {
+  getUrl: (key) => {
+    const config = apiConfigs[environment];
+    if (!config) {
+      throw new Error(`Environment configuration for '${environment}' not found.`);
+    }
+    return `${config.baseUrl}${config[key]}`;
+  },
+  getAzureClientId: getAzureClientId,
+  environment: environment,
+};
