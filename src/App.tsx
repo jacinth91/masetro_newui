@@ -245,3 +245,35 @@ export const ApiConfig = {
   getAzureClientId: getAzureClientId,
   environment: environment,
 };
+
+ <button
+          class="absolute -right-8 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-100 transition-opacity group"
+          (click)="copyMessage(msg.text, msg.id)"
+        >
+          <ng-container *ngIf="copiedId === msg.id">
+            <lucide-icon name="check" class="text-green-500 w-5 h-5"></lucide-icon>
+          </ng-container>
+          <ng-container *ngIf="copiedId !== msg.id">
+            <lucide-icon name="copy" class="text-gray-400 group-hover:text-blue-500 w-5 h-5"></lucide-icon>
+          </ng-container>
+        </button>
+
+        copyMessage(text: string, messageId: number): void {
+          navigator.clipboard
+            .writeText(text)
+            .then(() => {
+              this.copiedId = messageId;
+              setTimeout(() => (this.copiedId = null), 2000);
+            })
+            .catch((err) => {
+              console.error('Failed to copy text:', err);
+            });
+        }
+
+        send,
+        copy,
+        check,
+        messageCircle, 
+        <div *ngIf="!msg.isUser && msg.source" class="text-xs text-gray-400 mt-1">
+          Source: {{ msg.source }}
+        </div>
